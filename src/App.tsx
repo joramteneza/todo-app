@@ -1,24 +1,33 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { useState } from "react";
+import LoginForm from "./components/auth/login";
+import SignupForm from "./components/auth/signup";
+import { User, onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebase-config";
+import TodoList from "./components/Todolist";
 
 function App() {
+  const [isLoginForm, setIsLoginForm] = useState(true);
+  const [user, setUser] = useState<User | null>();
+
+  onAuthStateChanged(auth, (currentUser) => {
+    setUser(currentUser);
+  });
+
+  const handleFormToggle = () => {
+    setIsLoginForm(!isLoginForm);
+  };
+
+  console.log(user);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {!user && isLoginForm ? (
+        <LoginForm onToggleForm={handleFormToggle} />
+      ) : !user ? (
+        <SignupForm onToggleForm={handleFormToggle} />
+      ) : (
+        <TodoList user={user} />
+      )}
     </div>
   );
 }
