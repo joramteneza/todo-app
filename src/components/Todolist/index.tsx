@@ -32,8 +32,6 @@ const TodoList: React.FC<TodoListProps> = ({ user }) => {
     return () => unsubscribe();
   }, []);
 
-  console.log(todos);
-
   const addTodo = async (text: string) => {
     const newTodo: Todo = {
       id: (todos.length + 1).toString(),
