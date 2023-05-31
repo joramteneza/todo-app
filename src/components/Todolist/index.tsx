@@ -1,8 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import TodoForm from "./TodoForm";
 import TodoItem, { Todo } from "./TodoItem";
 import { User, signOut } from "firebase/auth";
-import { auth } from "../../firebase-config";
+import { auth, db } from "../../firebase-config";
+import {
+  collection,
+  onSnapshot,
+  query,
+  updateDoc,
+  doc,
+  addDoc,
+} from "firebase/firestore";
 
 interface TodoListProps {
   user: User;
@@ -11,16 +19,54 @@ interface TodoListProps {
 const TodoList: React.FC<TodoListProps> = ({ user }) => {
   const [todos, setTodos] = useState<Todo[]>([]);
 
-  const addTodo = (text: string) => {
+  useEffect(() => {
+    const q = query(collection(db, "todos"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      let todosArr: Todo[] = [];
+      querySnapshot.forEach((doc) => {
+        todosArr.push({ ...doc.data(), id: doc.id });
+      });
+      setTodos(todosArr);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  console.log(todos);
+
+  const addTodo = async (text: string) => {
     const newTodo: Todo = {
-      id: todos.length + 1,
+      id: (todos.length + 1).toString(),
       text: text,
     };
-    setTodos([...todos, newTodo]);
+
+    // Add the new todo to the Firebase Firestore database
+    const docRef = await addDoc(collection(db, "todos"), newTodo);
+
+    // Update the local state with the newly added todo
+    setTodos([...todos, { ...newTodo, id: docRef.id }]);
   };
 
-  const deleteTodo = (id: number) => {
+  const deleteTodo = async (id: string) => {
+    // Remove the todo from the database
+    await updateDoc(doc(db, "todos", id), { deleted: true });
+
+    // Remove the todo from the local state
     const updatedTodos = todos.filter((todo) => todo.id !== id);
+    setTodos(updatedTodos);
+  };
+
+  const updateTodo = async (id: string, newText: string) => {
+    // Update the todo in the database
+    await updateDoc(doc(db, "todos", id), { text: newText });
+
+    // Update the todo in the local state
+    const updatedTodos = todos.map((todo) => {
+      if (todo.id === id) {
+        return { ...todo, text: newText };
+      }
+      return todo;
+    });
     setTodos(updatedTodos);
   };
 
@@ -45,7 +91,12 @@ const TodoList: React.FC<TodoListProps> = ({ user }) => {
       <TodoForm addTodo={addTodo} />
       <ul>
         {todos.map((todo) => (
-          <TodoItem key={todo.id} todo={todo} deleteTodo={deleteTodo} />
+          <TodoItem
+            key={todo.id}
+            todo={todo}
+            deleteTodo={deleteTodo}
+            updateTodo={updateTodo}
+          />
         ))}
       </ul>
     </div>

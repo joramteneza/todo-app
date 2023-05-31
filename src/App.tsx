@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LoginForm from "./components/auth/login";
 import SignupForm from "./components/auth/signup";
 import { User, onAuthStateChanged } from "firebase/auth";
@@ -9,9 +9,13 @@ function App() {
   const [isLoginForm, setIsLoginForm] = useState(true);
   const [user, setUser] = useState<User | null>();
 
-  onAuthStateChanged(auth, (currentUser) => {
-    setUser(currentUser);
-  });
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+
+    return () => unsubscribe(); // Cleanup the listener when the component unmounts
+  }, []);
 
   const handleFormToggle = () => {
     setIsLoginForm(!isLoginForm);
@@ -20,11 +24,13 @@ function App() {
   console.log(user);
 
   return (
-    <div className="App">
-      {!user && isLoginForm ? (
-        <LoginForm onToggleForm={handleFormToggle} />
-      ) : !user ? (
-        <SignupForm onToggleForm={handleFormToggle} />
+    <div className="">
+      {!user ? (
+        isLoginForm ? (
+          <LoginForm onToggleForm={handleFormToggle} />
+        ) : (
+          <SignupForm onToggleForm={handleFormToggle} />
+        )
       ) : (
         <TodoList user={user} />
       )}
